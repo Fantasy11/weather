@@ -1,6 +1,8 @@
 package com.zcf.weather;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Debug;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
@@ -8,11 +10,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.zcf.weather.Gson.Daily_forecast;
 import com.zcf.weather.Gson.Weather;
 import com.zcf.weather.Util.HttpUtil;
@@ -29,11 +33,19 @@ public class WeatherActivity extends AppCompatActivity {
     private TextView tvtitleCity,tvtitleUpdateTime,tvtemp,tvweatherdetail;
     private LinearLayout futureItem;
     private TextView tvaqi,tvpm25,tvcomfort,tvwashCar,tvsport;
+    private ImageView bgPic;
     private static String Tag="xxxx";
     private static final boolean DEBUG = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if(Build.VERSION.SDK_INT>=21){
+            View decorView =getWindow().getDecorView();
+            decorView.setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+        }
         setContentView(R.layout.activity_weather);
         scrollView = findViewById(R.id.layout_weather);
         tvtitleCity = findViewById(R.id.title_city);
@@ -46,8 +58,17 @@ public class WeatherActivity extends AppCompatActivity {
         tvcomfort = findViewById(R.id.tv_comfort);
         tvwashCar = findViewById(R.id.tv_washCar);
         tvsport = findViewById(R.id.tv_sport);
+        bgPic=findViewById(R.id.background_pic);
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = sharedPreferences.getString("weather",null);
+        String picUrl =sharedPreferences.getString("pic",null);
+
+        if(picUrl!=null){
+            Glide.with(this).load(picUrl).into(bgPic);
+        }
+        else {
+            loadGetPicUrl();
+        }
         if(weatherString!=null){
             Weather weather = Utility.handleWeatherResponse(weatherString);
             showWeatherInfo(weather);
@@ -59,7 +80,34 @@ public class WeatherActivity extends AppCompatActivity {
         }
     }
 
+    private void loadGetPicUrl() {
+        String url ="http://guolin.tech/api/bing_pic";
+        HttpUtil.sendOkHttpRequest(url, new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Toast.makeText(WeatherActivity.this,"无法获取BG",Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String picUrl = response.body().string();
+                SharedPreferences.Editor editor = PreferenceManager
+                        .getDefaultSharedPreferences(WeatherActivity.this).edit();
+                editor.putString("pic",picUrl);
+                editor.apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeatherActivity.this).load(picUrl).into(bgPic);
+                    }
+                });
+
+            }
+        });
+    }
+
     private void requestWeatherIfo(String weatherId) {
+        //loadGetPicUrl();
         String key ="071b52abb0cd4f6dbe8bcc17881aa99c";
         String weatherUrl ="http://guolin.tech/api/weather" +
                 "?cityid="+weatherId+"&key="+key;
@@ -105,7 +153,7 @@ public class WeatherActivity extends AppCompatActivity {
     private void showWeatherInfo(Weather weather) {
         String cityName = weather.basic.cityName;
         String updatTime =weather.basic.update.updateTime.split(" ")[1];
-        String temp = weather.now.tmp+" ℃";
+        String temp = weather.now.tmp+"℃";
         String detail = weather.now.detail.txt;
         tvtitleCity.setText(cityName);
         tvtitleUpdateTime.setText(updatTime);
