@@ -2,6 +2,7 @@ package com.zcf.weather.fragment;
 
 import android.app.Fragment;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 
 import android.support.annotation.Nullable;
@@ -22,6 +23,7 @@ import com.bumptech.glide.util.Util;
 import com.zcf.weather.R;
 import com.zcf.weather.Util.HttpUtil;
 import com.zcf.weather.Util.Utility;
+import com.zcf.weather.WeatherActivity;
 import com.zcf.weather.db.City;
 import com.zcf.weather.db.County;
 import com.zcf.weather.db.Province;
@@ -81,6 +83,13 @@ public class ChooseFragment extends Fragment {
                     scity= cityList.get(position);
                     queryCounty();
                     //Log.d("ttt--",scity.getId()+"  "+scity.getCityName());
+                }
+                else if(currentLevel==LEVEL_COUNTY){
+                    Intent intent=new Intent(getActivity(), WeatherActivity.class);
+                    scounty = countyList.get(position);
+                    intent.putExtra("weatherId",scounty.getWeatherId());
+                    startActivityForResult(intent,1);
+                    getActivity().finish();
                 }
             }
         });

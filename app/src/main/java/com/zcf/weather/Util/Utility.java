@@ -3,6 +3,9 @@ package com.zcf.weather.Util;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.zcf.weather.Gson.Weather;
 import com.zcf.weather.db.City;
 import com.zcf.weather.db.County;
 import com.zcf.weather.db.Province;
@@ -74,5 +77,18 @@ public class Utility {
             }
         }
         return false;
+    }
+
+    public static Weather handleWeatherResponse(String response){
+        try {
+            JSONObject jsonObject =new JSONObject(response);
+            JSONArray jsonArray =jsonObject.getJSONArray("HeWeather");
+            String weatherContent =jsonArray.getJSONObject(0).toString();
+            return new Gson().fromJson(weatherContent,Weather.class);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
