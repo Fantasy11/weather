@@ -5,14 +5,20 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Debug;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,12 +34,16 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
 
-public class WeatherActivity extends AppCompatActivity {
+public class WeatherActivity extends AppCompatActivity implements View.OnClickListener {
     private ScrollView scrollView;
     private TextView tvtitleCity,tvtitleUpdateTime,tvtemp,tvweatherdetail;
     private LinearLayout futureItem;
     private TextView tvaqi,tvpm25,tvcomfort,tvwashCar,tvsport;
     private ImageView bgPic;
+    public SwipeRefreshLayout swipeRefreshLayout;
+    private ImageView home_bt;
+    public DrawerLayout drawerLayout;
+    private String weatherId,rPicUrl;
     private static String Tag="xxxx";
     private static final boolean DEBUG = false;
     @Override
@@ -59,12 +69,18 @@ public class WeatherActivity extends AppCompatActivity {
         tvwashCar = findViewById(R.id.tv_washCar);
         tvsport = findViewById(R.id.tv_sport);
         bgPic=findViewById(R.id.background_pic);
+        swipeRefreshLayout=findViewById(R.id.sRefreshLayout);
+        swipeRefreshLayout.setColorSchemeColors(getResources().getColor(R.color.colorPrimary));
+        home_bt=findViewById(R.id.home_bt);
+        home_bt.setOnClickListener(this);
+        drawerLayout=findViewById(R.id.drawerLayout);
+        drawerLayout.closeDrawers();
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = sharedPreferences.getString("weather",null);
-        String picUrl =sharedPreferences.getString("pic",null);
+        rPicUrl =sharedPreferences.getString("pic",null);
 
-        if(picUrl!=null){
-            Glide.with(this).load(picUrl).into(bgPic);
+        if(rPicUrl!=null){
+            Glide.with(this).load(rPicUrl).into(bgPic);
         }
         else {
             loadGetPicUrl();
@@ -72,12 +88,19 @@ public class WeatherActivity extends AppCompatActivity {
         if(weatherString!=null){
             Weather weather = Utility.handleWeatherResponse(weatherString);
             showWeatherInfo(weather);
+            weatherId=weather.basic.weatherCode;
         }
         else {
-            String weatherId = getIntent().getStringExtra("weatherId");
+            weatherId = getIntent().getStringExtra("weatherId");
             scrollView.setVisibility(View.INVISIBLE);
             requestWeatherIfo(weatherId);
         }
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeatherIfo(weatherId);
+            }
+        });
     }
 
     private void loadGetPicUrl() {
@@ -91,23 +114,24 @@ public class WeatherActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 final String picUrl = response.body().string();
-                SharedPreferences.Editor editor = PreferenceManager
-                        .getDefaultSharedPreferences(WeatherActivity.this).edit();
-                editor.putString("pic",picUrl);
-                editor.apply();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Glide.with(WeatherActivity.this).load(picUrl).into(bgPic);
-                    }
-                });
-
+                if(!picUrl.equals(rPicUrl)){
+                    SharedPreferences.Editor editor = PreferenceManager
+                            .getDefaultSharedPreferences(WeatherActivity.this).edit();
+                    editor.putString("pic",picUrl);
+                    editor.apply();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Glide.with(WeatherActivity.this).load(picUrl).into(bgPic);
+                        }
+                    });
+                }
             }
         });
     }
 
-    private void requestWeatherIfo(String weatherId) {
-        //loadGetPicUrl();
+    public void requestWeatherIfo(String weatherId) {
+        loadGetPicUrl();
         String key ="071b52abb0cd4f6dbe8bcc17881aa99c";
         String weatherUrl ="http://guolin.tech/api/weather" +
                 "?cityid="+weatherId+"&key="+key;
@@ -118,6 +142,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this,"获取天气信息失败b",Toast.LENGTH_SHORT).show();
+                        swipeRefreshLayout.setRefreshing(false);
                     }
                 });
             }
@@ -132,6 +157,7 @@ public class WeatherActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        swipeRefreshLayout.setRefreshing(false);
                         if(weather!=null &&weather.status.equals("ok")){
                             SharedPreferences.Editor editor =
                                     PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
@@ -191,5 +217,14 @@ public class WeatherActivity extends AppCompatActivity {
         tvwashCar.setText(washCar);
         tvsport.setText(sport);
         scrollView.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.home_bt:
+                drawerLayout.openDrawer(GravityCompat.START);
+        }
+
     }
 }

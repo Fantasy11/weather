@@ -20,6 +20,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.util.Util;
+import com.zcf.weather.Gson.Weather;
+import com.zcf.weather.MainActivity;
 import com.zcf.weather.R;
 import com.zcf.weather.Util.HttpUtil;
 import com.zcf.weather.Util.Utility;
@@ -85,11 +87,20 @@ public class ChooseFragment extends Fragment {
                     //Log.d("ttt--",scity.getId()+"  "+scity.getCityName());
                 }
                 else if(currentLevel==LEVEL_COUNTY){
-                    Intent intent=new Intent(getActivity(), WeatherActivity.class);
                     scounty = countyList.get(position);
-                    intent.putExtra("weatherId",scounty.getWeatherId());
-                    startActivityForResult(intent,1);
-                    getActivity().finish();
+                    Log.d("activ---", "onItemClick: "+getActivity());
+                    if(getActivity() instanceof MainActivity){
+                        Intent intent=new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weatherId",scounty.getWeatherId());
+                        startActivityForResult(intent,1);
+                        getActivity().finish();
+                    }
+                    else if(getActivity() instanceof WeatherActivity){
+                        WeatherActivity activity =(WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefreshLayout.setRefreshing(true);
+                        activity.requestWeatherIfo(scounty.getWeatherId());
+                    }
                 }
             }
         });
